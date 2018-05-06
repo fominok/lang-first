@@ -1,0 +1,6 @@
+[package]
+name = "langfirst"
+version = "0.1.0"
+authors = ["Evgeny Fomin <fominok@hotmail.com>"]
+
+[dependencies]

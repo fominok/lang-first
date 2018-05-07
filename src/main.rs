@@ -1,6 +1,11 @@
 #[no_mangle]
+
+#[macro_use] extern crate prettytable;
+use prettytable::Table;
+
 use std::io::{BufRead, BufReader};
 use std::fs::File;
+use std::fmt;
 
 #[derive(Debug)]
 enum Token {
@@ -16,7 +21,7 @@ enum Token {
     While,
     Do,
     Lpar,
-    RPar,
+    Rpar,
     Plus,
     Minus,
     Mul,
@@ -26,13 +31,53 @@ enum Token {
     Eq,
 }
 
-struct LexError(String);
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+struct TokenEntry {
+    token: Token,
+    row: usize,
+    col: usize,
+}
 
 #[derive(Debug)]
+enum TokenClass {
+    Number,
+    Name,
+    Keyword,
+    Symbol,
+}
+
+impl fmt::Display for TokenClass {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+fn classify(t: &Token) -> TokenClass {
+    match *t {
+        Token::Var | Token::Begin | Token::End
+            | Token::EndDot | Token::While | Token::Do => TokenClass::Keyword,
+        Token::Comma | Token::Semicolon | Token::Assert
+            | Token::Lpar | Token::Rpar | Token::Plus
+            | Token::Minus | Token::Mul | Token::Div
+            | Token::Lt | Token::Gt | Token::Eq => TokenClass::Symbol,
+        Token::VarName(_) => TokenClass::Name,
+        Token::Number(_) => TokenClass::Number,
+    }
+}
+
+struct LexError(String);
+
 struct Lexer {
     buf: String,
-    tokens: Vec<Token>,
+    tokens: Vec<TokenEntry>,
     ignore: bool,
+    row: usize,
+    col: usize,
 }
 
 impl Lexer {
@@ -41,6 +86,8 @@ impl Lexer {
             buf: String::new(),
             tokens: vec![],
             ignore: false,
+            row: 0,
+            col: 0
         }
     }
 
@@ -60,7 +107,7 @@ impl Lexer {
                     "WHILE" => Some(Token::While),
                     "DO" => Some(Token::Do),
                     "(" => Some(Token::Lpar),
-                    ")" => Some(Token::RPar),
+                    ")" => Some(Token::Rpar),
                     "+" => Some(Token::Plus),
                     "-" => Some(Token::Minus),
                     "*" => Some(Token::Mul),
@@ -76,16 +123,16 @@ impl Lexer {
                     }
                 };
 
-                let result = num_token().or(spec_token()).or(name_token());
-                if let Some(token) = result {
-                    self.tokens.push(token);
-                    None
-                } else {
-                    Some(LexError(p.clone()))
-                }
+                num_token().or(spec_token()).or(name_token())
+            };
+            let result = if let Some(token) = r {
+                self.push(token);
+                None
+            } else {
+                Some(LexError(self.buf.clone()))
             };
             self.buf.clear();
-            r
+            result
         } else {
             None
         }
@@ -109,7 +156,15 @@ impl Lexer {
         }
     }
 
-    fn read_char(&mut self, c: char) -> Option<LexError> {
+    fn push(&mut self, t: Token) {
+        let te = TokenEntry { token: t, row: self.row, col: self.col };
+        self.tokens.push(te);
+    }
+
+    fn read_char(&mut self, row: usize, col: usize, c: char) -> Option<LexError> {
+        self.row = row;
+        self.col = col;
+
         if self.ignore {
             if c == '}' {
                 self.ignore = false;
@@ -125,14 +180,14 @@ impl Lexer {
                 self.place_pending()
             } else if c == ',' {
                 let r = self.place_pending();
-                self.tokens.push(Token::Comma);
+                self.push(Token::Comma);
                 r
             } else if c == ';' {
                 let r = self.place_pending();
-                self.tokens.push(Token::Semicolon);
+                self.push(Token::Semicolon);
                 r
             } else if let Some(t) = self.read_op(c) {
-                self.tokens.push(t);
+                self.push(t);
                 None
             } else {
                 self.buf.push(c);
@@ -151,11 +206,22 @@ fn main() {
     for (i, line) in reader.lines().enumerate() {
         let l = line.expect("File read error");
         for (j, c) in l.chars().enumerate() {
-            if let Some(e) = lexer.read_char(c) {
-                panic!("Lex error: row {} col {}; buf: {}; Tokens passed: {:?}", i, j, e.0, lexer.tokens);
+            if let Some(e) = lexer.read_char(i, j, c) {
+                panic!("Lex error: row {} col {}; buf: {};", i, j, e.0);
             }
         }
         lexer.place_pending();
     }
-    println!("{:?}", lexer);
+
+    let mut table = Table::new();
+
+    table.add_row(row!["Position", "Token", "Class"]);
+    for token in lexer.tokens {
+        let pos = format!("Row: {}, Col: {}", token.row + 1, token.col);
+        let t = token.token;
+        let row = row![pos, t, classify(&t)];
+        table.add_row(row);
+    }
+
+    table.printstd();
 }

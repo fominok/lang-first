@@ -1,0 +1,19 @@
+Var a, b, i, r;
+
+Begin
+
+{ Возведение 2 в степень 10}
+
+a := 2;
+b := 10;
+i := 1;
+
+r := a;
+
+WHILE i < b DO
+  Begin
+    r := r * a;
+    i := i + 1;
+  End
+
+End.

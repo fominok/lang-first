@@ -1,0 +1,90 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[english, russian]{babel}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{listings,a4wide,longtable,amsmath,amsfonts,graphicx,tikz}
+\usepackage{indentfirst,verbatim}
+
+\usepackage{minted}
+\setminted[rust]{
+  fontsize=\scriptsize,
+  baselinestretch=1.2,
+  linenos,
+  frame=lines
+}
+
+\begin{document}
+\thispagestyle{empty}
+\begin{center}
+  {\large
+    Университет ИТМО \\
+    Кафедра Информатики и прикладной математики \\
+  }
+\end{center}
+\vspace{\stretch{2}}
+\begin{center}
+  {\large
+    Проектирование языков программирования и языков представления знаний\\
+  }
+    \vspace{\stretch{1}}
+  {\large
+    Лабораторная работа 1\\
+    ``Разработка лексического анализатора''\\
+  }
+
+\end{center}
+\vspace{\stretch{6}}
+\begin{flushright}
+  Работу выполнил студент группы P4117\\
+  {\it Фомин Евгений\\}
+\end{flushright}
+\vspace{\stretch{4}}
+\begin{center}
+  2018
+\end{center}
+\newpage
+
+\section{Цель работы}
+Разработать лексический анализатор для реализуемого языка и
+проверить корректность его работы на примерах.
+
+\section{Исходные данные}
+\subsection{БНФ реализуемого языка}
+\verbatiminput{bnf}
+
+Комментарии даны в фигурных скобках.
+
+\subsection{Список классов лексем}
+\begin{description}
+\item[Ключевое слово (Keyword)] Зарезервированные строки символов, например \texttt{Begin}
+\item[Идентификатор (Name)] Объявленнная переменная или ее использование в программе
+\item[Символ (Symbol)] Зарезервированные спецсимволы, применяемые в выражениях
+\item[Число (Number)] Численная константа
+
+\end{description}
+
+\section{Ход работы}
+
+\subsection{Исходный код программы с комментариями}
+\inputminted{rust}{main.rs}
+
+\subsection{Позитивный пример}
+\verbatiminput{input_one}
+\subsubsection{Результат}
+\verbatiminput{input_one_result}
+
+\subsubsection{Пример с некорректной лексемой}
+\verbatiminput{input_two}
+\subsubsection{Результат}
+\verbatiminput{input_two_result}
+
+\section{Вывод}
+
+В ходе работы был реализован лексический анализатор для
+небольшого Паскаль-подобного языка. Проверяя на допустимые лексемы,
+корректность программы, составленной из них,
+остается за рамками данной лабораторной
+работы и является задачей синтаксического анализатора.
+
+\end{document}

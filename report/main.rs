@@ -1,34 +1,16 @@
-#[no_mangle]
-
 #[macro_use] extern crate prettytable;
 use prettytable::Table;
-
 use std::io::{BufRead, BufReader};
 use std::fs::File;
 use std::fmt;
 
+// Перечисление допустимых лексем, некоторые из них
+// могут иметь содержимое
 #[derive(Debug)]
 enum Token {
-    Var,
-    VarName(String),
-    Comma,
-    Semicolon,
-    Begin,
-    End,
-    EndDot,
-    Assert,
-    Number(u32),
-    While,
-    Do,
-    Lpar,
-    Rpar,
-    Plus,
-    Minus,
-    Mul,
-    Div,
-    Lt,
-    Gt,
-    Eq,
+    Var, VarName(String), Comma, Semicolon, Begin, End,
+    EndDot, Assert, Number(u32), While, Do, Lpar, Rpar,
+    Plus, Minus, Mul, Div, Lt, Gt, Eq,
 }
 
 impl fmt::Display for Token {
@@ -37,18 +19,18 @@ impl fmt::Display for Token {
     }
 }
 
+// Структура, описывающие вхождение лексемы в анализируемый
+// текст
 struct TokenEntry {
     token: Token,
     row: usize,
     col: usize,
 }
 
+// Перечисление классов лексем
 #[derive(Debug)]
 enum TokenClass {
-    Number,
-    Name,
-    Keyword,
-    Symbol,
+    Number, Name, Keyword, Symbol,
 }
 
 impl fmt::Display for TokenClass {
@@ -57,6 +39,7 @@ impl fmt::Display for TokenClass {
     }
 }
 
+// Отображение лексема -> класс
 fn classify(t: &Token) -> TokenClass {
     match *t {
         Token::Var | Token::Begin | Token::End
@@ -72,12 +55,13 @@ fn classify(t: &Token) -> TokenClass {
 
 struct LexError(String);
 
+// Внутреннее состояние анализатора
 struct Lexer {
-    buf: String,
-    tokens: Vec<TokenEntry>,
-    ignore: bool,
-    row: usize,
-    col: usize,
+    buf: String,             // буфер накопленных подряд символов
+    tokens: Vec<TokenEntry>, // распознанные лексемы
+    ignore: bool,            // пропуск содержимого комментария
+    row: usize,              // текущая строка
+    col: usize,              // текущий символ в строке
 }
 
 impl Lexer {
@@ -91,6 +75,9 @@ impl Lexer {
         }
     }
 
+    // Обработка буфера для получения лексемы.
+    // Вызов этой функции следует за обнаружением разделителя
+    // (перенос строки или пробел, а также запятые и точки с запятой)
     fn place_pending(&mut self) -> Option<LexError> {
         if !self.buf.is_empty() {
             let r = {
@@ -132,6 +119,7 @@ impl Lexer {
         }
     }
 
+    // Определение лексемы для операторов
     fn read_op(&mut self, c: char) -> Option<Token> {
         if self.buf == ":" && c == '=' {
             self.buf.clear();
@@ -152,11 +140,16 @@ impl Lexer {
         }
     }
 
+    // Записать лексему в список с подстановкой текущей позиции лексера
     fn push(&mut self, t: Token) {
         let te = TokenEntry { token: t, row: self.row, col: self.col };
         self.tokens.push(te);
     }
 
+
+    // Чтение и обработка одного символа.
+    // Разделители, если являются лексемами, записываются в список лексем и
+    // инициируют обаботку накопленного буфера
     fn read_char(&mut self, row: usize, col: usize, c: char) -> Option<LexError> {
         self.row = row;
         self.col = col;
@@ -203,7 +196,7 @@ fn main() {
         let l = line.expect("File read error");
         for (j, c) in l.chars().enumerate() {
             if let Some(e) = lexer.read_char(i, j, c) {
-                panic!("Lex error: row {} col {}; buf: {};", i + 1, j, e.0);
+                panic!("Lex error: row {} col {}; buf: {};", i, j, e.0);
             }
         }
         lexer.place_pending();
